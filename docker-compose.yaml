@@ -123,7 +123,7 @@ services:
       - PGID=1000
       - TZ=America/New_York
     volumes:
-      - </path/on/host/pcsonarr:/config
+      - </path/on/host/pc/sonarr:/config
       - "/plex/TV Shows:/plex/TV Shows" #optional
       - /storage0/downloads/Finished:/downloads/Finished #changed from /HD/Finished/
     restart: unless-stopped
