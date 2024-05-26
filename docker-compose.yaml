@@ -1,0 +1,160 @@
+version: '3'
+services:
+  vpn:
+    image: thrnz/docker-wireguard-pia
+    volumes:
+      - pia:/pia
+      - pia-shared:/pia-shared
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      # Required environment variables
+      - LOC=swiss
+      - USER=<username>
+      - PASS=<password>
+      # Optional environment variables
+      - LOCAL_NETWORK=192.168.1.0/24 #example
+      - PORT_FORWARDING=1
+      - VPNDNS=10.0.0.241 #PIA DNS+MACE 
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.default.disable_ipv6=1
+      - net.ipv6.conf.all.disable_ipv6=1
+      - net.ipv6.conf.lo.disable_ipv6=1
+    healthcheck:
+      test: ping -c 1 www.google.com || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - 8191:8191   # flaresolverr
+      - 7575:7575   # homarr
+      - 5055:5055   # overseerr
+      - 9696:9696   # prowlarr
+      - 7878:7878   # radarr
+      - 8787:8787   # readarr
+      - 8989:8989   # sonarr
+      - 8181:8181   # tautulli
+      - 8112:8112   # deluge
+      - 6881:6881   # deluge
+      - 6881:6881/udp  # deluge
+      - 58846:58846   # deluge (optional)
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=America/New_York
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Optional, only if you want docker integration
+      - </path/on/host/pc/configs:/app/data/configs
+      - </path/on/host/pc/icons:/app/public/icons
+      - </path/on/host/pc/data:/data
+    network_mode: "service:vpn"
+
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=America/New_York
+      - PORT=5055 #optional
+    volumes:
+      - </path/on/host/pcoverseer:/app/config
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - </path/on/host/pc/prowlarr:/config
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - </path/on/host/pc/radarr:/config
+      - /plex/Movies:/plex/Movies #optional
+      - /storage0/downloads/Finished:/downloads/Finished #changed from /HD/Finished/
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - </path/on/host/pc/readarr:/config
+      - /plex/eBooks:/plex/eBooks #optional
+      - /storage0/downloads/Finished:/downloads/Finished #changed from /HD/Finished/
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - </path/on/host/pcsonarr:/config
+      - "/plex/TV Shows:/plex/TV Shows" #optional
+      - /storage0/downloads/Finished:/downloads/Finished #changed from /HD/Finished/
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - </path/on/host/pc/tautulli:/config
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - DELUGE_LOGLEVEL=error #optional
+    volumes:
+      - </path/on/host/pc/deluge:/config
+      - /storage0/downloads:/downloads #ensure this is updated
+    restart: unless-stopped
+    network_mode: "service:vpn"
+
+volumes:
+  pia:
+  pia-shared:
